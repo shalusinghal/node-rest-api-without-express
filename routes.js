@@ -4,7 +4,8 @@
  * 2. If "path is a object, then we assume it is a RegEx and use RegEx matching
  */
 
-const employeeController = require('./controllers/EmployeeController.js');
+const employeeController = require('./controllers/EmployeeController');
+const projectController = require('./controllers/ProjectController');
 
 const routes = [
     {
@@ -31,6 +32,31 @@ const routes = [
         method: 'DELETE',
         path: /\/employee\/([0-9a-z]+)/,
         handler: employeeController.delete.bind(employeeController)
+    },
+    {
+        method: 'POST',
+        path: '/project',
+        handler: projectController.create.bind(projectController)
+    },
+    {
+        method: 'GET',
+        path: '/project',
+        handler: projectController.index.bind(projectController)
+    },
+    {
+        method: 'GET',
+        path: /\/project\/([0-9a-z]+)/,
+        handler: projectController.show.bind(projectController)
+    },
+    {
+        method: 'PUT',
+        path: /\/project\/([0-9a-z]+)/,
+        handler: projectController.update.bind(projectController)
+    },
+    {
+        method: 'DELETE',
+        path: /\/project\/([0-9a-z]+)/,
+        handler: projectController.delete.bind(projectController)
     },
 ];
 

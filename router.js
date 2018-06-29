@@ -22,7 +22,7 @@ module.exports = async (req, res, routes) => {
     // Extract the "id" parameter from route and pass it to controller
     let param = null;
 
-    if (typeof route.path === 'object') {
+    if (route && typeof route.path === 'object') {
         param = req.url.match(route.path)[1];
     }
 
@@ -32,7 +32,7 @@ module.exports = async (req, res, routes) => {
         if (req.method === 'POST' || req.method === 'PUT') {
             body = await getPostData(req);
         }
-        
+
         return route.handler(req, res, param, body);
     }
     else {
@@ -54,7 +54,8 @@ function getPostData(req) {
            });
 
            req.on('end', () => {
-               resolve(parse(body));
+               //resolve(parse(body));
+               resolve(body);
            });
        }
        catch (e) {
