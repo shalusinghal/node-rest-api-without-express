@@ -116,7 +116,7 @@ class EmployeeController {
 
             // delete the employee from peers
             // set manager to null
-            let conditions = {_id: param};
+            let conditions = { _id: param, deletedAt: null };
 
             await Employee.remove(conditions);
 
