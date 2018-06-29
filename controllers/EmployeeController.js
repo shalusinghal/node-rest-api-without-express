@@ -44,7 +44,7 @@ class EmployeeController {
         }
         catch(error) {
             if (error.name === 'ValidationError') {
-                return helpers.validationError(res, ...error);
+                return helpers.validationError(res, error);
             }
             else if (error.message.indexOf('Duplicate key error') !== -1) {
                 return helpers.validationError(res, 'Email already exists');
@@ -78,7 +78,23 @@ class EmployeeController {
 
     // PUT /employee/:id
     async update (req, res, param, postData) {
-        let { name, email, isManager = false, manager = null, peers = [] } = postData;
+        let updateData = {
+            isManager: false
+        };
+
+        if (postData.name) {
+            updateData.name = postData.name;
+        }
+
+        if (postData.email) {
+            updateData.email = postData.email;
+        }
+
+        if (postData.isManager) {
+            updateData.isManager = true;
+        }
+
+        let { manager = null, peers = [] } = postData;
 
         try {
             let manageExists = await this.validateManager(manager);
@@ -87,13 +103,16 @@ class EmployeeController {
                 return helpers.validationError(res, 'Manager is invalid');
             }
 
-            let peersExists = await this.validatePeers(peers, isManager);
+            let peersExists = await this.validatePeers(peers, updateData.isManager);
 
             if (!peersExists) {
                 return helpers.validationError(res, 'Peer(s) is invalid');
             }
 
-            const employee = await Employee.update({ _id: param, deletedAt: null }, { name, email, isManager, manager, peers });
+            updateData.manager = manager;
+            updateData.peers = peers;
+
+            const employee = await Employee.update({ _id: param, deletedAt: null }, { $set: updateData }, {new: true});
 
             return helpers.success(res, employee);
         }
@@ -129,7 +148,7 @@ class EmployeeController {
 
     // Checks if a manager with given id exists
     async validateManager (manager) {
-        if (manager == null) {
+        if (manager === null) {
             return true;
         }
 

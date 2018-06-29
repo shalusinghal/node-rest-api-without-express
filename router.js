@@ -29,7 +29,7 @@ module.exports = async (req, res, routes) => {
     // Extract request body
     if (route) {
         let body = null;
-        if (req.method === 'POST') {
+        if (req.method === 'POST' || req.method === 'PUT') {
             body = await getPostData(req);
         }
         
