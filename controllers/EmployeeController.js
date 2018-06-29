@@ -57,7 +57,7 @@ class EmployeeController {
 
     // GET /employee/:id
     async show(req, res, param) {
-	    try {
+        try {
             let conditions = { _id: param, deletedAt: null };
 
             const selectParams = {

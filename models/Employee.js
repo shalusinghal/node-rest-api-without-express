@@ -5,40 +5,40 @@ const BaseModel = require('./BaseModel');
 
 const employeeSchema = new Schema({
     // Name of the employee
-	name: {
-	    type: String, required: true
+    name: {
+        type: String, required: true
     },
 
     // Email of the employee
-	email: {
-	    type: String, required: true, unique: true
+    email: {
+        type: String, required: true, unique: true
     },
 
     // Indicates if the employee is a manager. We are managing
     // employees and managers in same collection
-	isManager: {
-	    type: Boolean, default: false
+    isManager: {
+        type: Boolean, default: false
     },
 
     // List of employees who have this employee as manager
-	peers: {
-	    type: Array, default: []
+    peers: {
+        type: Array, default: []
     },
 
     // List employee's projects
-	projects: {
-	    type: Array, default: []
+    projects: {
+        type: Array, default: []
     },
 
     // Employee's manager
     manager: {
-	    type: String
-	},
+        type: String
+    },
 
     // Indicates if this employee is deleted. While deleting employee, we do not
     // remove the record, we simply set it's deleted at to current time
     deletedAt: {
-	    type: Date,
+        type: Date,
         default: null
     }
 }, { timestamps: true });
