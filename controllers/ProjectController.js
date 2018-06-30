@@ -178,7 +178,7 @@ class ProjectController {
                 new: true
             };
 
-            const project = await Project.update({ _id: param }, {$set: updateData}, options);
+            const project = await Project.findOneAndUpdate({ _id: param }, {$set: updateData}, options);
 
             return helpers.success(res, project);
         }

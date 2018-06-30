@@ -54,6 +54,12 @@ class EmployeeController {
 
             const employee = await Employee.create({ name, email, isManager, managerId, peers });
 
+            // set managerId of all peers
+            if (employee.peers.length > 0) {
+                const update = {$set: {managerId: mongoose.Types.ObjectId(employee._id)}};
+                await Employee.update({_id: {$in: employee.peers}}, update, {multi: true});
+            }
+
             return helpers.success(res, employee.toClient());
         }
         catch (error) {
@@ -141,6 +147,7 @@ class EmployeeController {
     // PUT /employee/:id
     async update (req, res, param, postData) {
         let employee;
+
         try {
             employee = await Employee.get({ _id: param }, { isManager: 1 });
         }
@@ -153,6 +160,7 @@ class EmployeeController {
         }
 
         postData = JSON.parse(postData);
+
         let updateData = {
             isManager: employee.isManager
         };
@@ -202,12 +210,19 @@ class EmployeeController {
 
             const employee = await Employee.findOneAndUpdate({ _id: param }, { $set: updateData }, { new: true });
 
+            // set managerId of all peers
+            if (employee.peers.length > 0) {
+                const update = {$set: {managerId: mongoose.Types.ObjectId(employee._id)}};
+                await Employee.update({ _id: {$in: employee.peers} }, update, { multi: true });
+            }
+
             return helpers.success(res, employee.toClient());
         }
         catch (error) {
             console.log(error);
+
             if (error.name === 'ValidationError') {
-                return helpers.validationError(res, ...error);
+                return helpers.validationError(res, error);
             }
             else if (error.message.indexOf('duplicate key error') !== -1) {
                 return helpers.validationError(res, 'Email already exists');
@@ -233,21 +248,47 @@ class EmployeeController {
         }
 
         try {
-            let conditions = { _id: param };
-            await Employee.remove(conditions);
-
-            // set manager to null
-            conditions = {managerId: mongoose.Types.ObjectId(param)};
-            let update = { $set: { managerId: null } };
-            await Employee.update(conditions, update, {multi: true});
-
-            // delete manager to null
-            update = { $pull: { peers: mongoose.Types.ObjectId(param) } };
-            await Employee.update({}, update, {multi: true});
+            let update, conditions;
 
             // delete employee from project
-            update = { $pull: { employees: mongoose.Types.ObjectId(param) } };
-            await Project.update({}, update, {multi: true});
+            try {
+                update = { $pull: { employeeIds: mongoose.Types.ObjectId(param) } };
+                await Project.update({}, update, {multi: true});
+            }
+            catch (e) {
+                console.log('Error in delete employee from project', e);
+            }
+
+            // delete managerId from project
+            try {
+                update = { $set: { managerId: null } };
+                await Project.update({managerId: mongoose.Types.ObjectId(param)}, update, {multi: true});
+            }
+            catch (e) {
+                console.log('Error in delete employee from project', e);
+            }
+
+            // delete peers
+            try {
+                update = { $pull: { peers: mongoose.Types.ObjectId(param) } };
+                await Employee.update({}, update, {multi: true});
+            }
+            catch (e) {
+                console.log('delete peers', e);
+            }
+
+            // set manager to null
+            try {
+                conditions = {managerId: mongoose.Types.ObjectId(param)};
+                update = { $set: { managerId: null } };
+                await Employee.update(conditions, update, {multi: true});
+            }
+            catch (e) {
+                console.log('set manager to null', e);
+            }
+
+            conditions = { _id: param };
+            await Employee.remove(conditions);
 
             return helpers.success(res);
         }

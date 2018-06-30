@@ -32,7 +32,7 @@ Request Requirements
 
 Models
 ~~~~~~
-
+(I have assumed manager and employee as same entity and distinguished them with 'isManager' property)
 Employee:
 {
     name: ""                // Name of the employee,

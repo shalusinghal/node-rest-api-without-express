@@ -6,23 +6,34 @@ const BaseModel = require('./BaseModel');
 const employeeSchema = new Schema({
     // Name of the employee
     name: {
-        type: String, required: true
+        type: String,
+        required: true
     },
 
     // Email of the employee
     email: {
-        type: String, required: true, unique: true
+        type: String,
+        validate: {
+            validator: function(v) {
+                return /^([\w-\.]+@([\w-]+\.)+[\w-]{2,4})?$/.test(v);
+            },
+            message: '{VALUE} is not a valid email!'
+        },
+        required: true,
+        unique: true
     },
 
     // Indicates if the employee is a manager. We are managing
     // employees and managers in same collection
     isManager: {
-        type: Boolean, default: false
+        type: Boolean,
+        default: false
     },
 
     // List of employees who have this employee as manager
     peers: {
-        type: Array, default: []
+        type: Array,
+        default: []
     },
 
     // Employee's manager

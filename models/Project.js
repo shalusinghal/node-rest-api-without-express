@@ -95,7 +95,7 @@ class Project {
         });
     }
 
-    static update (conditions, updateData, options) {
+    static findOneAndUpdate (conditions, updateData, options) {
         return new Promise((resolve, reject) => {
             projectModel.findOneAndUpdate(conditions, updateData, options, (err, docs) => {
                 if (docs) {
@@ -116,6 +116,19 @@ class Project {
                 }
                 else {
                     resolve(docs);
+                }
+            });
+        });
+    }
+
+    static update (conditions, updateData, options) {
+        return new Promise((resolve, reject) => {
+            projectModel.update(conditions, updateData, options, (err, docs) => {
+                if (docs) {
+                    resolve(docs);
+                }
+                else {
+                    reject(err);
                 }
             });
         });
