@@ -1,12 +1,7 @@
 const mongoose = require('mongoose');
+const config = require('../config.js');
 
-// if already we have a connection, don't connect to database again
-// if (connectionInstance) {
-//     module.exports = connectionInstance;
-// 	return;
-// }
-
-const connectionInstance  = mongoose.createConnection('mongodb://localhost:27017/wizni');
+const connectionInstance  = mongoose.createConnection(config.MONGO_CONNECTION_STRING);
 
 connectionInstance.on('error', (err) => {
     if (err) {
@@ -21,4 +16,5 @@ connectionInstance.once('open', () => {
 module.exports = connectionInstance;
 
 const logDebug = true;
+
 mongoose.set('debug', logDebug);
