@@ -8,62 +8,14 @@ class ProjectController {
     // GET /project
     async index (req, res) {
         try {
-            const aggPipeline = [
-                {
-                    $match: {
-                        "deletedAt": null
-                    }
-                },
-                {
-                    $lookup:
-                        {
-                            from: "employees",
-                            localField: "employees",
-                            foreignField: "_id",
-                            as: "employeeData"
-                        }
-                },
-                {
-                    $unwind: {
-                        "path": "$employeeData",
-                        "preserveNullAndEmptyArrays": true
-                    }
-                },
-                {
-                    $match: {
-                        "employeeData.deletedAt": null
-                    }
-                },
-                {
-                    $group: {
-                        _id:"$_id",
-                        employees:{
-                            $push:"$employeeData.name"
-                        },
-                        name: {$first: "$name"},
-                        manager: {$first: "$manager"}
-                    },
-                },
-                {
-                    $lookup:
-                        {
-                            from: "employees",
-                            localField: "manager",
-                            foreignField: "_id",
-                            as: "managerData"
-                        }
-                },
-                {
-                    $project: {
-                        _id:1,
-                        employees: 1,
-                        name: 1,
-                        managerData: {name: 1}
-                    }
-                }
-            ];
+            const selectParams = {
+                _id: 1,
+                name: 1,
+                managerId: 1,
+                employeeIds: 1
+            };
 
-            const projects = await Project.aggregation(aggPipeline);
+            const projects = await Project.getAll({}, selectParams);
 
             return helpers.success(res, projects);
         }
@@ -76,32 +28,32 @@ class ProjectController {
     async create (req, res, param, postData) {
         postData = JSON.parse(postData);
 
-        let { name, employees = [], manager = null } = postData;
+        let { name, employeeIds = [], managerId = null } = postData;
 
-        if (! (employees instanceof Array)) {
-            employees = [employees];
+        if (! (employeeIds instanceof Array)) {
+            employeeIds = [employeeIds];
         }
 
         try {
-            let manageExists = await this.validateManager(manager);
+            let manageExists = await this.validateManager(managerId);
 
             if (!manageExists) {
                 return helpers.validationError(res, 'Manager is invalid');
             }
 
-            let employeesExists = await this.validateEmployees(employees);
+            let employeesExists = await this.validateEmployees(employeeIds);
 
             if (!employeesExists) {
                 return helpers.validationError(res, 'Employee(s) is invalid');
             }
 
-            employees = employees.map(element => { return mongoose.Types.ObjectId(element) });
+            employeeIds = employeeIds.map(element => { return mongoose.Types.ObjectId(element) });
 
-            if (manager !== null) {
-                manager = mongoose.Types.ObjectId(manager);
+            if (managerId !== null) {
+                managerId = mongoose.Types.ObjectId(managerId);
             }
 
-            const project = await Project.create({ name, employees, manager });
+            const project = await Project.create({ name, employeeIds, managerId });
 
             return helpers.success(res, project);
         }
@@ -116,60 +68,42 @@ class ProjectController {
     }
 
     // GET /project/:id
-    async show(req, res, param) {
+    async show (req, res, param) {
         try {
             const aggPipeline = [
                 {
-                    $match: {
-                        "deletedAt": null,
-                        "_id": mongoose.Types.ObjectId(param)
+                    "$match" : {
+                        "_id" : mongoose.Types.ObjectId(param)
                     }
                 },
                 {
-                    $lookup:
-                        {
-                            from: "employees",
-                            localField: "employees",
-                            foreignField: "_id",
-                            as: "employeeData"
-                        }
-                },
-                {
-                    $unwind: {
-                        "path": "$employeeData",
-                        "preserveNullAndEmptyArrays": true
+                    "$lookup" : {
+                        "from" : "employees",
+                        "localField" : "managerId",
+                        "foreignField" : "_id",
+                        "as" : "manager"
                     }
                 },
                 {
-                    $match: {
-                        "employeeData.deletedAt": null
+                    "$lookup" : {
+                        "from" : "employees",
+                        "localField" : "employeeIds",
+                        "foreignField" : "_id",
+                        "as" : "employees"
                     }
                 },
                 {
-                    $group: {
-                        _id:"$_id",
-                        employees:{
-                            $push:"$employeeData.name"
+                    "$project" : {
+                        "_id" : 1,
+                        "name" : 1,
+                        "manager" : {
+                            "_id" : 1,
+                            "name" : 1
                         },
-                        name: {$first: "$name"},
-                        manager: {$first: "$manager"}
-                    },
-                },
-                {
-                    $lookup:
-                        {
-                            from: "employees",
-                            localField: "manager",
-                            foreignField: "_id",
-                            as: "managerData"
+                        "employees" : {
+                            "_id" : 1,
+                            "name" : 1
                         }
-                },
-                {
-                    $project: {
-                        _id:1,
-                        employees: 1,
-                        name: 1,
-                        managerData: {name: 1}
                     }
                 }
             ];
@@ -185,6 +119,20 @@ class ProjectController {
 
     // PUT /project/:id
     async update (req, res, param, postData) {
+        param = mongoose.Types.ObjectId(param);
+
+        let project;
+        try {
+            project = await Project.get({ _id: param }, { _id: 1 });
+        }
+        catch (e) {
+            console.log(e);
+        }
+
+        if (!project) {
+            return helpers.error(res, 'Entity not found', 404);
+        }
+
         let updateData = {};
         postData = JSON.parse(postData);
 
@@ -192,36 +140,45 @@ class ProjectController {
             updateData.name = postData.name;
         }
 
-        let { manager = null, employees = [] } = postData;
+        let { managerId = null, employeeIds = [] } = postData;
 
-        if (! (employees instanceof Array)) {
-            employees = [employees];
+        if (! (employeeIds instanceof Array)) {
+            employeeIds = [employeeIds];
         }
 
         try {
-            let manageExists = await this.validateManager(manager);
+            let manageExists = await this.validateManager(managerId);
 
             if (!manageExists) {
-                return helpers.validationError(res, 'Manager is invalid');
+                return helpers.validationError(res, 'managerId is invalid');
             }
 
-            if (manager !== null) {
-                updateData.manager = mongoose.Types.ObjectId(manager);
+            if (managerId !== null) {
+                updateData.managerId = mongoose.Types.ObjectId(managerId);
             }
 
-            let employeesExists = await this.validateEmployees(employees);
+            let employeesExists = await this.validateEmployees(employeeIds);
 
             if (!employeesExists) {
-                return helpers.validationError(res, 'Employee(s) is invalid');
+                return helpers.validationError(res, 'EmployeeIds is invalid');
             }
 
-            employees = employees.map(element => { return mongoose.Types.ObjectId(element) });
+            employeeIds = employeeIds.map(element => { return mongoose.Types.ObjectId(element) });
 
-            if (employees.length > 0) {
-                updateData.employees = employees;
+            if (employeeIds.length > 0) {
+                updateData.employeeIds = employeeIds;
             }
 
-            const project = await Project.update({ _id: param, deletedAt: null }, {$set: updateData}, {new: true});
+            const options = {
+                fields: {
+                    name: 1,
+                    employeeIds: 1,
+                    managerId: 1
+                },
+                new: true
+            };
+
+            const project = await Project.update({ _id: param }, {$set: updateData}, options);
 
             return helpers.success(res, project);
         }
@@ -237,11 +194,25 @@ class ProjectController {
     }
 
     // DELETE /employee/:id
-    async delete(req, res, param) {
-        try {
-            let conditions = { _id: param, deletedAt: null };
+    async delete (req, res, param) {
+        param = mongoose.Types.ObjectId(param);
 
-            await Project.update(conditions, {$set: {deletedAt: new Date()}});
+        let project;
+        try {
+            project = await Project.get({ _id: param }, { _id: 1 });
+        }
+        catch (e) {
+            console.log(e);
+        }
+
+        if (!project) {
+            return helpers.error(res, 'Entity not found', 404);
+        }
+
+        try {
+            let conditions = { _id: param };
+
+            await Project.remove(conditions);
 
             return helpers.success(res);
         }
@@ -251,13 +222,13 @@ class ProjectController {
     }
 
     // Checks if a manager with given id exists
-    async validateManager (manager) {
-        if (manager === null) {
+    async validateManager (managerId) {
+        if (managerId === null) {
             return true;
         }
 
         try {
-            const managerExists = await Employee.get({ _id: manager, isManager: true, deletedAt: null });
+            const managerExists = await Employee.get({ _id: managerId, isManager: true });
             return !!(managerExists);
         }
         catch (e) {
@@ -266,18 +237,18 @@ class ProjectController {
     }
 
     // Checks if all the peers exist in database
-    async validateEmployees (employees) {
-        if (! (employees instanceof Array)) {
-            employees = [employees];
+    async validateEmployees (employeeIds) {
+        if (! (employeeIds instanceof Array)) {
+            employeeIds = [employeeIds];
         }
 
-        if (employees.length === 0) {
+        if (employeeIds.length === 0) {
             return true;
         }
 
         try {
-            const employeesExists = await Employee.getAll({_id: {$in: employees}, deletedAt: null}, {_id: 1});
-            return (employeesExists.length === employees.length) ;
+            const employeesExists = await Employee.getAll({ _id: {$in: employeeIds} }, {_id: 1});
+            return (employeesExists.length === employeeIds.length) ;
         }
         catch (e) {
             return false;

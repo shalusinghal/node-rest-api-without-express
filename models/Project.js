@@ -10,20 +10,13 @@ const projectSchema = new Schema({
     },
 
     // List of employees who are working on project
-    employees: {
+    employeeIds: {
         type: Array, default: []
     },
 
     // Project manager
-    manager: {
-        type: String
-    },
-
-    // Indicates if this project is deleted. While deleting project, we do not
-    // remove the record, we simply set it's deleted at to current time
-    deletedAt: {
-        type: Date,
-        default: null
+    managerId: {
+        type: Schema.ObjectId
     }
 }, { timestamps: true });
 

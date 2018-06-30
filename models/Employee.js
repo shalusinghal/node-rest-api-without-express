@@ -25,23 +25,22 @@ const employeeSchema = new Schema({
         type: Array, default: []
     },
 
-    // List employee's projects
-    projects: {
-        type: Array, default: []
-    },
-
     // Employee's manager
-    manager: {
-        type: String
-    },
-
-    // Indicates if this employee is deleted. While deleting employee, we do not
-    // remove the record, we simply set it's deleted at to current time
-    deletedAt: {
-        type: Date,
-        default: null
+    managerId: {
+        type: Schema.ObjectId
     }
 }, { timestamps: true });
+
+employeeSchema.method('toClient', function () {
+    const employee = this.toObject();
+
+    delete employee.__v;
+    delete employee.deletedAt;
+    delete employee.createdAt;
+    delete employee.updatedAt;
+
+    return employee;
+});
 
 
 const employeeModel = BaseModel.model('employees', employeeSchema);
@@ -61,7 +60,6 @@ class Employee {
                     resolve(obj);
                 }
                 else {
-                    console.log(err);
                     reject(err);
                 }
             });
@@ -119,7 +117,7 @@ class Employee {
         });
     }
 
-    static update (conditions, updateData, options) {
+    static findOneAndUpdate (conditions, updateData, options) {
         return new Promise((resolve, reject) => {
             employeeModel.findOneAndUpdate(conditions, updateData, options, (err, docs) => {
                 if (docs) {
@@ -127,6 +125,32 @@ class Employee {
                 }
                 else {
                     reject(err);
+                }
+            });
+        });
+    }
+
+    static update (conditions, updateData, options) {
+        return new Promise((resolve, reject) => {
+            employeeModel.update(conditions, updateData, options, (err, docs) => {
+                if (docs) {
+                    resolve(docs);
+                }
+                else {
+                    reject(err);
+                }
+            });
+        });
+    }
+
+    static aggregation (pipeline) {
+        return new Promise((resolve, reject) => {
+            employeeModel.aggregate(pipeline, (err, docs) => {
+                if (err) {
+                    reject(err);
+                }
+                else {
+                    resolve(docs);
                 }
             });
         });
